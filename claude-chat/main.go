@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -32,51 +33,46 @@ func init() {
 	}
 
 	brc = bedrockruntime.NewFromConfig(cfg)
-
 }
 
+var verbose *bool
+
 func main() {
+	//flag.BoolVar(verbose, "verbose", false, "setting to true will log messages being exchanged with LLM")
+	verbose = flag.Bool("verbose", false, "setting to true will log messages being exchanged with LLM")
+	flag.Parse()
+
 	reader := bufio.NewReader(os.Stdin)
 
-	// initial conversation state
-	chatInput := Chat{}
+	var chatHistory string
 
 	for {
 		fmt.Print("\nEnter your message: ")
 		input, _ := reader.ReadString('\n')
 		input = strings.TrimSpace(input)
 
-		chatInput.CurrentMessage = input
+		msg := chatHistory + fmt.Sprintf(claudePromptFormat, input)
 
-		response, err := chatInput.send()
+		response, err := send(msg)
 
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		chatInput.History = chatInput.History + response
+		chatHistory = msg + response
 
 		fmt.Println("\n--- Response ---")
 		fmt.Println(response)
 	}
 }
 
-type Chat struct {
-	History        string
-	CurrentMessage string
-}
+const claudePromptFormat = "\n\nHuman: %s\n\nAssistant:"
 
-func (ci Chat) getPayload() string {
-	return ci.History + fmt.Sprintf(claudePromptFormat, ci.CurrentMessage)
-}
+func send(msg string) (string, error) {
 
-const claudePromptFormat = "\n\nHuman:%s\n\nAssistant:"
-
-func (ci Chat) send() (string, error) {
-
-	msg := ci.getPayload()
-
-	//log.Println("sending message", msg)
+	if *verbose {
+		fmt.Println("[sending message]", msg)
+	}
 
 	payload := claude.Request{Prompt: msg, MaxTokensToSample: 2048}
 
