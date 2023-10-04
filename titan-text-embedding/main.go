@@ -19,8 +19,6 @@ const (
 	titanEmbeddingModelID = "amazon.titan-embed-text-v1" //https://docs.aws.amazon.com/bedrock/latest/userguide/model-ids-arns.html
 )
 
-const input = `cat`
-
 func main() {
 
 	region := os.Getenv("AWS_REGION")
@@ -34,6 +32,8 @@ func main() {
 	}
 
 	brc := bedrockruntime.NewFromConfig(cfg)
+
+	input := os.Args[1]
 
 	payload := embedding.Request{
 		InputText: input,
@@ -62,7 +62,9 @@ func main() {
 		log.Fatal("failed to unmarshal", err)
 	}
 
-	fmt.Println("generated vector length -", len(resp.Embedding))
-	fmt.Println("response from LLM\n", resp.Embedding)
+	fmt.Println("embedding vector from LLM\n", resp.Embedding)
+	fmt.Println()
 
+	fmt.Println("generated embedding for input -", input)
+	fmt.Println("generated vector length -", len(resp.Embedding))
 }

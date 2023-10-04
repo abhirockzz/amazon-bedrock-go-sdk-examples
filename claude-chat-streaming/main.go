@@ -1,12 +1,15 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/abhirockzz/amazon-bedrock-go-inference-params/claude"
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -17,20 +20,9 @@ import (
 
 const defaultRegion = "us-east-1"
 
-const (
-	claudePromptFormat = "\n\nHuman:%s\n\nAssistant:"
-	claudeV2ModelID    = "anthropic.claude-v2" //https://docs.aws.amazon.com/bedrock/latest/userguide/model-ids-arns.html
-)
+var brc *bedrockruntime.Client
 
-const prompt = `<paragraph> 
-"In 1758, the Swedish botanist and zoologist Carl Linnaeus published in his Systema Naturae, the two-word naming of species (binomial nomenclature). Canis is the Latin word meaning "dog", and under this genus, he listed the domestic dog, the wolf, and the golden jackal."
-</paragraph>
-
-Please rewrite the above paragraph to make it understandable to a 5th grader.
-
-Please output your rewrite in <rewrite></rewrite> tags.`
-
-func main() {
+func init() {
 
 	region := os.Getenv("AWS_REGION")
 	if region == "" {
@@ -42,32 +34,63 @@ func main() {
 		log.Fatal(err)
 	}
 
-	brc := bedrockruntime.NewFromConfig(cfg)
+	brc = bedrockruntime.NewFromConfig(cfg)
+}
 
-	payload := claude.Request{
-		Prompt:            fmt.Sprintf(claudePromptFormat, prompt),
-		MaxTokensToSample: 2048,
-		Temperature:       0.5,
-		TopK:              250,
-		TopP:              1,
+var verbose *bool
+
+func main() {
+	//flag.BoolVar(verbose, "verbose", false, "setting to true will log messages being exchanged with LLM")
+	verbose = flag.Bool("verbose", false, "setting to true will log messages being exchanged with LLM")
+	flag.Parse()
+
+	reader := bufio.NewReader(os.Stdin)
+
+	var chatHistory string
+
+	for {
+		fmt.Print("\nEnter your message: ")
+		input, _ := reader.ReadString('\n')
+		input = strings.TrimSpace(input)
+
+		msg := chatHistory + fmt.Sprintf(claudePromptFormat, input)
+
+		response, err := send(msg)
+
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		chatHistory = msg + response
 	}
+}
+
+const claudePromptFormat = "\n\nHuman: %s\n\nAssistant:"
+
+func send(msg string) (string, error) {
+
+	if *verbose {
+		fmt.Println("[sending message]", msg)
+	}
+
+	payload := claude.Request{Prompt: msg, MaxTokensToSample: 2048}
 
 	payloadBytes, err := json.Marshal(payload)
 	if err != nil {
-		log.Fatal(err)
+		return "", err
 	}
 
 	output, err := brc.InvokeModelWithResponseStream(context.Background(), &bedrockruntime.InvokeModelWithResponseStreamInput{
 		Body:        payloadBytes,
-		ModelId:     aws.String(claudeV2ModelID),
+		ModelId:     aws.String("anthropic.claude-v2"),
 		ContentType: aws.String("application/json"),
 	})
 
 	if err != nil {
-		log.Fatal("failed to invoke model: ", err)
+		return "", err
 	}
 
-	_, err = processStreamingOutput(output, func(ctx context.Context, part []byte) error {
+	resp, err := processStreamingOutput(output, func(ctx context.Context, part []byte) error {
 		fmt.Print(string(part))
 		return nil
 	})
@@ -76,8 +99,7 @@ func main() {
 		log.Fatal("streaming output processing error: ", err)
 	}
 
-	//fmt.Println("\n====== response from LLM ======\n", resp.Completion)
-
+	return resp.Completion, nil
 }
 
 type StreamingOutputHandler func(ctx context.Context, part []byte) error
@@ -109,6 +131,8 @@ func processStreamingOutput(output *bedrockruntime.InvokeModelWithResponseStream
 			fmt.Println("union is nil or unknown type")
 		}
 	}
+
+	//fmt.Println("final result", combinedResult)
 
 	resp.Completion = combinedResult
 
