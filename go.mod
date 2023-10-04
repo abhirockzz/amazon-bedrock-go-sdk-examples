@@ -10,7 +10,7 @@ require (
 	github.com/aws/aws-sdk-go-v2 v1.21.0
 	github.com/aws/aws-sdk-go-v2/config v1.18.42
 	github.com/aws/aws-sdk-go-v2/service/bedrock v1.0.0
-	github.com/aws/aws-sdk-go-v2/service/bedrockruntime v1.0.0
+	github.com/aws/aws-sdk-go-v2/service/bedrockruntime v1.1.0
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.40.0
 	github.com/aws/constructs-go/constructs/v10 v10.2.70
 	github.com/aws/jsii-runtime-go v1.88.0
