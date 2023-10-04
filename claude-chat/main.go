@@ -38,7 +38,6 @@ func init() {
 var verbose *bool
 
 func main() {
-	//flag.BoolVar(verbose, "verbose", false, "setting to true will log messages being exchanged with LLM")
 	verbose = flag.Bool("verbose", false, "setting to true will log messages being exchanged with LLM")
 	flag.Parse()
 
