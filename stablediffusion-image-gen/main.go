@@ -20,8 +20,6 @@ const (
 	stableDiffusionXLModelID = "stability.stable-diffusion-xl-v0" //https://docs.aws.amazon.com/bedrock/latest/userguide/model-ids-arns.html
 )
 
-const prompt = `Sri lanka tea plantation.`
-
 func main() {
 
 	region := os.Getenv("AWS_REGION")
@@ -35,6 +33,9 @@ func main() {
 	}
 
 	brc := bedrockruntime.NewFromConfig(cfg)
+
+	prompt := os.Args[1]
+	fmt.Println("generating image based on prompt -", prompt)
 
 	payload := stabilityai.Request{
 		TextPrompts: []stabilityai.TextPrompt{{Text: prompt}},

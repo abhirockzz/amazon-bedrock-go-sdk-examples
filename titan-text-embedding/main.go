@@ -62,6 +62,7 @@ func main() {
 		log.Fatal("failed to unmarshal", err)
 	}
 
+	fmt.Println("generated vector length -", len(resp.Embedding))
 	fmt.Println("response from LLM\n", resp.Embedding)
 
 }
